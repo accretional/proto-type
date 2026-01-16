@@ -1,15 +1,13 @@
-syntax = "proto2";
-
-package google.protobuf;
-
-option go_package = "github.com/accretional/proto-type";
+syntax = "proto3";
 
 package proto-type;
 
+option go_package = "github.com/accretional/proto-type";
+
 // In addition to deferred computation this gives us the ability to represent the Builder Pattern
-// As long as method's input and output_types are the same, it means we can essentially convert Dispatch[] / stream Dispatch into x.MethodA(a).MethodB(b)
+// As long as method's input and output_types are the same, it means we can essentially convert Dispatch[] / stream Dispatch into x.MethodA().MethodB()
 // When those types are FileDescriptorProto, it essentially allows us to have a type system closed under f: FileDescriptorProto x f -> FileDescriptorProto
-// This is sufficient for generic types.
+// So, Dispatch(Fn FileDescriptorProto -> X) is sufficient for any transformation across types, or evaluating to any other expression.
 message Dispatch {
   MethodDescriptorProto method = 1;
   // Validate that the output_type of method is the same as request's type
@@ -43,12 +41,11 @@ message GenericDescriptorProto {
   optional string name = 1;
   FileDescriptorProto generic_proto = 2;
   FileDescriptorProto derived_proto = 3;
-  // Note that builder may generate another GenericDescriptorProto with a builder
   // TODO: protovalidate that generic_proto has method, that method_type takes DescriptorProto and returns FileDescriptorProto?
   repeated Expression builder = 3;
 }
 
-// Monadic under Expresson Evaluation, should eventually consume the entire AST as RuntimeDescriptorProto.Eval().Eval().Eval() continues
+// Monadic under Expression Evaluation, should eventually consume the entire AST as RuntimeDescriptorProto.Eval().Eval().Eval() continues
 // Maybe not necessary? Could be helpful for debugging tho
 message RuntimeDescriptorProto {
   optional string name = 1;
@@ -56,6 +53,16 @@ message RuntimeDescriptorProto {
   FileDescriptorSet deps = 2;
   map<string, DescriptorProto> symbols = 3;
   repeated ExpressionDescriptorProto active_AST = 4;
+}
+
+// Experimental/Aspirational
+service Runtime {
+  rpc Parse(Text) returns(RuntimeDescriptorProto);
+  rpc Step(RuntimeDescriptorProto) returns(RuntimeDescriptorProto);
+  rpc Evaluate(RuntimeDescriptorProto) returns(RuntimeDescriptorProto);
+  // Note that this can contain a Dispatch call and/or GenericDescriptorProto
+  rpc Run(ExpressionDescriptorProto) returns(RuntimeDescriptorProto);
+  rpc Export(RuntimeDescriptorProto) returns(FileDescriptorProto);
 }
 
 message SemanticVersion {
@@ -132,6 +139,10 @@ message Command {
   repeated Flag flags = 2;
 }
 
+// This makes even opaque executables reflective/discoverable/semantic for us.
+// Note that content is only serializabe for convenience in transporting/debugging/movement. We don't want to actually store the contents in here very often, if ever.
+// Typically you'd want to check this file first, and then use a file API to grab the content.
+// Basically the reason this proto exists is so that you can do that check before downloading a large file you might not need or be able to run. It's kind of like our inode.
 message BinaryDescriptorProto {
   optional string name = 1;
   FileDescriptorProto fd = 2;
@@ -146,10 +157,8 @@ message BinaryDescriptorProto {
 
 service Builder {
   rpc Parse(Text) returns(BuildDescriptorProto);
-  rpc Step(BuildDescriptorProto) returns(BuildDescriptorProto);
   rpc Precompile(BuildDescriptorProto) returns(FileDescriptorProto);
   rpc Compile(FileDescriptorProto) returns(BinaryDescriptorProto);
   rpc Build(Dispatch) returns(BinaryDescriptorProto);
   rpc Make(Text) returns(BinaryDescriptorProto);
 }
-
