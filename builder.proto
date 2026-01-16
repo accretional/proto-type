@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package proto-type;
+package proto_type;
 
 option go_package = "github.com/accretional/proto-type";
 
@@ -21,7 +21,7 @@ message Dispatch {
 message Expression {
   message Cell {
     Expression lhs = 1;
-    Expression rhs = 1;
+    Expression rhs = 2;
   }
   oneof content {
     string name = 1;
