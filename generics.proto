@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package proto_type;
+
+option go_package = "github.com/accretional/proto-type";
+
+service Morpher {
+  rpc Hom(DescriptorProto) returns (FileDescriptorProto);
+  rpc Transform(Morph) returns (FileDescriptorProto);
+  rpc Derive(MetaMorph) returns (FileDescriptorProto);
+  // Once we can have AI do this...
+  // rpc Make(Morph) returns (FileDescriptorProto);
+  // rpc Search(Morph) returns (FileDescriptorProto);
+}
+
+message TypeMorph {
+  FileDescriptorProto source = 1;
+  FileDescriptorProto target = 2;
+}
+
+message DownMorph {
+  FileDescriptorProto source = 1;
+  DescriptorProto target = 2;
+}
+
+message UpMorph {
+  DescriptorProto source = 1;
+  FileDescriptorProto target = 2;
+}
+
+message RPCMorph {
+  DescriptorProto source = 1;
+  DescriptorProto target = 2;
+}
+
+message ComposeMorph {
+  MethodDescriptorProto source = 1;
+  MethodDescriptorProto target = 2;
+}
+
+message AdaptMorph {
+  MethodDescriptorProto source = 1;
+  DescriptorProto target = 2;
+}
+
+message CallMorph {
+  DescriptorProto source = 1;
+  MethodDescriptorProto target = 2;
+}
+
+message MutateMorph {
+  FileDescriptorProto source = 1;
+  DescriptorProto target = 2;
+}
+
+message WrapMorph {
+  FileDescriptorProto source = 1;
+  FileDescriptorProto target = 2;
+}
+
+message AnyMorph {
+  google.protobuf.Any source  = 1;
+  google.protobuf.Any source  = 2;
+}
+
+message Morph {
+  oneof kind {
+    TypeMorph derivation = 1;
+    DownMorph instance = 2;
+    UpMorph abstraction = 3;
+    RPCMorph conversion = 4;
+    ComposeMorph composition = 5;
+    AdaptMorph adapter = 6;
+    CallMorph caller = 7;
+    MutateMorph mutation = 8;
+    WrapMorph wrap = 9;
+    AnyMorph anymorph  = 10;
+  }
+}
+
+message MorphSearchSettings {
+  int max_depth  = 1;
+}
+
+message MetaMorph {
+  AnyMorph anymorph = 1;
+  MorphSearchSettings settings = 2;
+}
