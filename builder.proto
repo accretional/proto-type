@@ -1,0 +1,155 @@
+syntax = "proto2";
+
+package google.protobuf;
+
+option go_package = "github.com/accretional/proto-type";
+
+package proto-type;
+
+// In addition to deferred computation this gives us the ability to represent the Builder Pattern
+// As long as method's input and output_types are the same, it means we can essentially convert Dispatch[] / stream Dispatch into x.MethodA(a).MethodB(b)
+// When those types are FileDescriptorProto, it essentially allows us to have a type system closed under f: FileDescriptorProto x f -> FileDescriptorProto
+// This is sufficient for generic types.
+message Dispatch {
+  MethodDescriptorProto method = 1;
+  // Validate that the output_type of method is the same as request's type
+  google.protobuf.Any request = 2;
+}
+
+// These are S-Expressions / AST for a basic LISP and interpreter
+// Interpret Cells as dispatch, otherwise merely flatten the expression and keep going
+// This structure allows for Dispatch "pipelining" eg f1 (f2 (f3 a))
+// But because of its tree-like structure it also gives us higher order functions eg ((f1 f2) f3) a 
+message Expression {
+  message Cell {
+    Expression lhs = 1;
+    Expression rhs = 1;
+  }
+  oneof content {
+    string name = 1;
+    google.protobuf.Any atom = 2;
+    Cell cell = 3;
+  }
+}
+
+// This allows us to define new names/types dynamically by resolving our own AST
+message ExpressionDescriptorProto {
+  optional string name = 1;
+  Expression expression = 2;
+}
+
+// Technically these don't need this type but it's helpful to have an easier way to represent common generic setups
+message GenericDescriptorProto {
+  optional string name = 1;
+  FileDescriptorProto generic_proto = 2;
+  FileDescriptorProto derived_proto = 3;
+  // Note that builder may generate another GenericDescriptorProto with a builder
+  // TODO: protovalidate that generic_proto has method, that method_type takes DescriptorProto and returns FileDescriptorProto?
+  repeated Expression builder = 3;
+}
+
+// Monadic under Expresson Evaluation, should eventually consume the entire AST as RuntimeDescriptorProto.Eval().Eval().Eval() continues
+// Maybe not necessary? Could be helpful for debugging tho
+message RuntimeDescriptorProto {
+  optional string name = 1;
+  // Initial file descriptors used to initialize types/symbols/builders
+  FileDescriptorSet deps = 2;
+  map<string, DescriptorProto> symbols = 3;
+  repeated ExpressionDescriptorProto active_AST = 4;
+}
+
+message SemanticVersion {
+  optional string name = 1;
+  string major_version = 2;
+  string minor_version = 3;
+  string patch_version = 4;
+}
+
+message LanguageTarget {
+  string language = 1;
+  SemanticVersion version = 2;
+}
+
+message BuildTarget {
+  CPUArchitecture arch = 1;
+  LinkerSettings linker_settings = 2;
+  LanguageTarget language = 3;
+  SemanticVersion version = 4;
+  string path log_dest = 5;
+}
+
+message BuildDescriptorProto {
+  optional string name = 1;
+  optional string package = 2;
+  FileDescriptorSet deps = 3;
+  repeated GenericDescriptorProtos = 4;
+  repeated ExpressionDescriptorProto expressions = 5;
+  repeated string exported_symbols = 6;
+  BuildTarget build_target = 7;
+}
+
+message Text {
+  repeated string tokens = 1;
+}
+
+enum CPUArchitecture {
+  ARCHITECTURE_UNKNOWN = 0,
+  ARCHITECTURE_x86 = 1,
+  ARCHITECTURE_ARM = 2
+}
+
+enum LinkerSettings {
+  LINKER_UNKNOWN = 0,
+  LINKER_SHELL = 1,
+  LINKER_CLI = 2,
+  LINKER_STATELESS_SERVICE = 3,
+  LINKER_MAPREDUCE = 4,
+  LINKER_STATEFUL_INSTANCE = 5,
+  LINKER_CODING_AGENT = 6,
+  LINKER_TESTING = 7
+}
+
+message ExecutableDescriptorProto {
+  optional string name = 1;
+  CPUArchitecture architecure = 2;
+  int64 size_compressed = 3;
+  int64 size_raw = 4;
+  repeated string hard_deps = 5;
+  // eg not linked
+  repeated string soft_deps = 6;
+  LinkerSettings linker_settings = 7;
+}
+
+message Flag {
+  string shortname = 1;
+  string fullname = 2;
+  string input_type = 3;
+  string desc = 4;
+}
+
+message Command {
+  repeated Command sub_commands = 1;
+  repeated Flag flags = 2;
+}
+
+message BinaryDescriptorProto {
+  optional string name = 1;
+  FileDescriptorProto fd = 2;
+  ExecutableDescriptorProto = 3;
+  BuildDescriptorProto = 4;
+  string debug_logs = 5; // important build logs, custom notes, etc
+  string path = 6;
+  Command command = 7;
+  // For convenient serialization and processing, not recommend for actual storage to disk
+  optional bytes content = 8;
+}
+
+service Builder {
+  rpc Parse(Text) returns(BuildDescriptorProto);
+  rpc Step(BuildDescriptorProto) returns(BuildDescriptorProto);
+  rpc Precompile(BuildDescriptorProto) returns(FileDescriptorProto);
+  rpc Compile(FileDescriptorProto) returns(BinaryDescriptorProto);
+  rpc Build(Dispatch) returns(BinaryDescriptorProto);
+  rpc Make(Text) returns(BinaryDescriptorProto);
+}
+
