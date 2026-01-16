@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package proto_type;
+
+option go_package = "github.com/accretional/proto-type";
+
+message TextDescriptorProto {
+  string text = 1;
+}
+
+message ContextDescriptorProto {
+  TextDescriptorProto description = 1;
+  repeated google.protobuf.Any contents = 2;
+  repeated ContextDescriptorProto subtext = 3;
+}
+
+message NameDescriptorProto {
+  TextDescriptorProto description = 1;
+  ContextDescriptorProto context = 2;
+  repeated DescriptorProto related_entities = 3;
+}
+
+message FormDescriptorProto {
+  string name = 1;
+  FileDescriptorProto fd = 2;
+  string type = 3;
+  bytes value = 4;
+  // TODO possibly contain history or history id
+}
+
+message AdjustmentDesciptorProto {
+  FormDescriptorProto form = 1;
+  ContextDescriptorProto context = 2;
+}
+
+message TransformRequest {
+  string type = 1;
+  bytes value = 2;
+  string new_type = 3;
+}
+
+message RenameRequest {
+  string name = 1;
+  NameDescriptorProto description = 2;
+  FormDescriptorProto form = 3;
+  AdjustmentDesciptorProto adjustment = 4;
+}
+
+// FileDescriptorProto recursively enumerates dependent type info and is analogous to a type definition
+// FormDescriptorProto contains all the information necessary to deserialize value into an object called "name" with a compact type identifier
+// So, FormDescriptorProto is a fully reflective instantiation of a particular type that can be parsed and used by any client regardless of language
+// FormDescriptorProtos could themselves be passed as arguments, so Former is essentially capable of dynamic type casting/augmentation or defining/deriving/adapting a new type
+// Because FormDescriptorProto encapsulates FileDescriptorProto, Condense and Adjust are completely adaptable monadic endofunctor across the universal category of types, AND instances
+// You need an implementation involving LLM access to developer tools and memory for this to be useful
+service Former {
+  // Casting general text and data dumps into self-describing data adhering to common types
+  rpc Form(TextDescriptorProto) returns(FormDescriptorProto);
+  rpc Contextualize(ContextDescriptorProto) returns(FormDescriptorProto);
+  rpc Transform(TransformRequest) returns(FormDescriptorProto);
+
+  // Converting well-formed data into new self-describing data of a different type
+  // Categorize: find a more abstract or general type/representation/condensation of the data
+  rpc Categorize(NameDescriptorProto) returns(FormDescriptorProto);
+  // Identify: match this data to a specific, well-recognized entity
+  rpc Identify(NameDescriptorProto) returns (FormDescriptorProto);
+  // Find: search for similar entities or attempt to deliver on a request that requires some form of contextualization/enrichment
+  rpc Find(NameDescriptorProto) returns (FormDescriptorProto);
+  // Materialize: convert the data into a more well-formed or commonly understood structure
+  rpc Materialize(NameDescriptorProto) returns(FormDescriptorProto);
+
+  // Condense: convert the data into a denser structure according to the context
+  rpc Condense(AdjustmentDesciptorProto) returns (FormDescriptorProto);
+  // Adjust: adjust the data to adhere to structure that is more relevant to the context
+  rpc Adjust(AdjustmentDesciptorProto) returns (FormDescriptorProto);
+  // Generalize: widen the assumed scope/context of the data into a more general or enriched structure
+  rpc Generalize(AdjustmentDesciptorProto) returns (FormDescriptorProto);
+  
+  // Do is a maximally flexible interface for data manipulation
+  // Full traversal across the universal category of types and instances in any direction
+  rpc Do(AdjustmentDesciptorProto) returns (FormDescriptorProto);
+
+  // Name is a maximally compressible interface from arbitrarily structured/large data into a semantic name
+  rpc Name(NameDescriptorProto) returns (TextDescriptorProto);
+  // Rename is a maximally flexible AND compressible interface for manipulation of a pre-existing semantic name. Solves perhaps the hardest problem in computer science (joking but not really)
+  rpc Rename(RenameRequest) returns (TextDescriptorProto);
+}
