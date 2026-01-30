@@ -149,19 +149,41 @@ If we allow Bar = Collection\<T\> and Baz = Collection\<T\>, we are strongly 2-c
 
 This is not that special on its own, since LISPs and many other programming languages implement S-expressions as we do here, or other structures capable of handling these distinctions and n-categorical constructions. The main difference is that through service discovery, API/type reflection, dynamic type introspection (eg morpher.proto) and a distributed type registry, our fully-serializable, gRPC/proto-based implementation is capable of capabilities that are perhaps novel (at least, in actual application programming environments):
 
-* Distributed type graph walks
+## Distributed type graphs
+
+Type graphs that can be:
+
+* walked
+* searched
+* explored
+* queried
+* extended
+* enriched with natural transformations
 
 Searching or transforming types by walking the graph of natural, explicit, implicit (eg via structural isomorphisms between functionally equivalent proto messages, application of two explicit conversions), projective (eg by establishing a field-to-field mapping between source and target types, with other source fields being dropped/"merged" according to some logic, and other target fields being given default values), functor-informed (eg by extending the search to anonymous derived types based on generics/functors like Collection\<T\> or Map\<F\>), categorical (traversing the google.protobuf.Any <-> "TypedStructure"DescriptorProto <-> DescriptorProto <-> FileDescriptorProto <-> BinaryDescriptorProto <-> Generic/HOFDescriptorProto <-> ExpressionDescriptorProto <-> RuntimeDescriptorProto ontology from serialized types that are not self-describing, to fully reflective and self-describing types, to 2-categorical types, to n-categorial partial expressions of arbitrary structure), or even completely arbitrary (via an agentic form<-> form implementation operating on self-contained, self-describing types embedded with what can be thought of as enrichment metadata).
 
 This would enable something like a "knowledge graph" but more grounded in actual programming structures (eg MakeEcommerceSubscriptionOrder rather than human-legible ontologies like SportsTeam) and relationships that arise more naturally (eg because one service operates on both entities, or an existing API operates between the two, or one was defined in terms of the other). Because agentic LLMs could operate on this graph themselves, or something like [HSNW](https://en.wikipedia.org/wiki/Hierarchical_navigable_small_world) could be used to efficiently traverse it with semantic indices, it would be incredibly useful as the backbone for agentic runtime environments and engines 🤫
 
-* Lazy service discovery and type reflection
+## Higher Order Discovery
+
+Discovery of not just service producers, but:
+
+* Service Definitions
+* Type Information
+* Relationships, interactions, and shared interfaces/contexts of typed structures
+* Semantic API search (see above)
+* Source code, structured representations/data models within a particular application domain
 
 gRPC is already very underratedly useful for allowing APIs to enumerate and reflect their service method's types to clients before they even send a message or otherwise interact with the  server. With higher order functions, projections, generics, and a categorical type registry, complex analytical or data-processing queries could be efficiently "planned" ahead of time by using the type system to find RPCs and existing types/services operating between types. In other words, it allows **higher order discovery:** discovery of not just service implementations and individual servers' reflective API surfaces, but discovery of service *definitions* and evaluable functions/expressions allowing types to be modified across well-defined, structure-preserving entities (like Collection\<T\>) which may be more readily/commonly accepted among accessible gRPC servers relative to a particular client.
 
-* Organically Assembling Ontologies, Semantic Discovery, and other Sci-Fi Pipedreams
+## Agentic Coordination at Scale
 
-Names are [Schelling points](https://en.wikipedia.org/wiki/Focal_point_(game_theory)) that lead queries and data clients towards the nearest legible entities associated with whatever their client is semantically looking for. In other words, if you want to know about Protein Shakes, you probably open something on the Internet and search "Protein Shakes" or just directly navigate to some protein-shake related destination like proteinshakes.accretional.com or https://en.wikipedia.org/protein_shake - this is why Google makes hundreds of billions of dollars per year, and you cannot buy proteinshakes.tld on the Domain Name System without shelling out a ton of money: they "own" these terms in the habits of consumers and rent them back to advertisers and web operators (good work if you can get it)
+* Organically Assembling Ontologies
+* Semantic Discovery of explicitly-defined/shared types and messages
+* Autonomous economic collaboration across trust barriers
+* Well-defined interface for remote manipulation/tool-use/communication
+
+Names are [Schelling points](https://en.wikipedia.org/wiki/Focal_point_(game_theory)) that lead information clients towards the nearest legible entities associated with the semantics (per the client's understanding) at hand. In other words, if you want to know about Protein Shakes, you probably open something on the Internet and search "Protein Shakes" or just directly navigate to some protein-shake related destination like proteinshakes.accretional.com or https://en.wikipedia.org/protein_shake - this is why Google makes hundreds of billions of dollars per year, and why you cannot buy proteinshakes.tld on the Domain Name System without shelling out a ton of money: they "own" these terms in the habits of consumers and rent them back to advertisers and web operators (good business if you can get it)
 
 For the same reason, if you were trying to coordinate on protein shakes with other food scientists in your giant corporate food-production operation, you might search "protein shakes" on their intranet to find coworkers and work-related information about the subject. This makes shared type systems and tools for traversing and operating them at runtime extremely promising for AI coding agents collaborating with each other across remote compute/contextual/trust boundaries. It gives them a highly-dense representation of something they're working on: "protein shakes", not "this one protein shake I might want to design" or "the protein shakes in our warehouse" - and defines it for them. With service discovery, full type reflection, type-graph travesal, and the ability to extend/publish APIs, the true promise and potential utility of this kind of distributed type system lies in coordinating and deduplicating agents in a way that makes them literal service consumer/producers against each other.
 
