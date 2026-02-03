@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package proto_type;
+
+option go_package = "github.com/accretional/proto-type";
+
+message DescriptorReference {
+  // Can be either the url to a source code .proto definition or a type_url to a published .proto, or something resolvable by a proto registry
+  // Note that FileDescriptorProto allows name to be set relative to the root of its source tree, so this can be considered an override/prepended base FileDescriptorProto
+  string source_url = 1;
+  // source_url evaluates as a FileDescriptorProto - this indexes into named types within it. [] -> the FileDescriptorProto [a, b] -> type b within type a
+  repeated string name = 2;
+  // starts out unpopulated or with minimal anonymous/temp types
+  FileDescriptorProto source_defs = 3;
+  // gets built out recursively
+  repeated DescriptorReference deps = 3;
+}
+
+message TypeReference {
+  string type_url = 1;
+  // If this is a generic or derived type
+  repeated string inner_types = 2;
+}
