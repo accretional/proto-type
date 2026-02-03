@@ -106,18 +106,14 @@ message MessageProjection {
 }
 
 message TypeProjection {
-  TypeRef type = 1;
+  string name = 1;
   Projection projection = 2;
-}
-
-// for cartesian products/joins/wrapped types
-message FullProjection {
-  TypeProjection outer = 1;
-  repeated ProductProjection inner = 2;
+  repeated DescriptorProto outer_fields = 3; // Unnested product types
+  repeated TypeProjection inner_fields = 4; // when results/FROM get cast with AS eg FROM table1 as t1-> TypeProjection{name=t1, projection empty, outer_fields = [table]}. Nested product types
 }
 
 service Projector {
   rpc Parse(StringValue) returns(Projection);
   rpc ProjectData(MessageProjection) returns(google.protobuf.Any);
-  rpc Project(FullProjection) returns(DescriptorReference);
+  rpc Project(TypeProjection) returns(DescriptorReference);
 }
