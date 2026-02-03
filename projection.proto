@@ -106,16 +106,18 @@ message MessageProjection {
 }
 
 message TypeProjection {
-  // TODO replace with common resolvable TypeRef
-  repeated FileDescriptorProto deps = 1;
-  FileDescriptorProto defs = 2;
-  string type_name = 3; // should resolve to a DescriptorProto
-  Projection projection = 4;
+  TypeRef type = 1;
+  Projection projection = 2;
 }
-  
+
+// for cartesian products/joins/wrapped types
+message FullProjection {
+  TypeProjection outer = 1;
+  repeated ProductProjection inner = 2;
+}
 
 service Projector {
   rpc Parse(StringValue) returns(Projection);
-  rpc Project(MessageProjection) returns(google.protobuf.Any);
-  rpc Derive(TypeProjection) returns(DescriptorProto);
+  rpc ProjectData(MessageProjection) returns(google.protobuf.Any);
+  rpc Project(FullProjection) returns(DescriptorReference);
 }
