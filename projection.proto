@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package proto_type;
+
+option go_package = "github.com/accretional/proto-type";
+
+// Operations are roughly analogous to built-in functions, like https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/functions-all
+// Starting with just a smattering of common/cross-type operations
+enum UnaryOperation {
+    UNARY_NONE = 0; // identity function
+    UNARY_TOSTRING = 1;
+    UNARY_LENGTH = 2; // for non-aggregate types, returns 1
+    UNARY_FLOOR = 3; // for strings, TOLOWER
+    UNARY_CEILING = 4; // for string, TOUPPER
+    UNARY_ABS = 5; // for string, TRIM
+    UNARY_INVERSE = 6; // for string, REVERSE
+    UNARY_TYPEOF = 7;
+  }
+
+// Also aggregate operations, since those are just accumulated/folded/etc binary operations
+enum BinaryOperation {
+    BINARY_NONE = 0; // identity function, <lhs, rhs>
+    BINARY_SUM  = 1; // for strings * int-like, convert int-like to string; for strings * strings, becomes CONCAT
+    BINARY_SUBTRACTION  = 2; // for strings, removes the rightmost instance of the rhs from the lhs. Eg foobarbaz - bar = foobaz, foobarbazbar - bar = foobarbaz.
+    BINARY_MAX = 3; // for strings, pick the longer length string
+    BINARY_MIN = 4; // for strings, pick the shorter length string
+    BINARY_PRODUCT = 5; // for strings * int-like, becomes REPEAT. If int-like is negative, repeats backwards. for strings * strings, becomes STRING_AGG/string join
+    BINARY_DIVISION = 6; // for strings * int-like, becomes an inverse of REPEAT (if int-like is negative, inverse of REPEAT backwards). for strings * strings, becomes string split
+    BINARY_AND = 7; // operand is falsy if it is either the default value for its type or eg "false", "False"
+    BINARY_OR = 8; // operand is falsy if it is either the default value for its type or eg "false", "False"
+    BINARY_INC = 9; // implements COUNT by folding-left, eg COUNT([a, b, c])-> BINARY_INC(a, BINARY_INC(b, BINARY_INC(c, 0))) -> BINARY_INC(a, BINARY_INC(b, 1)) -> BINARY_INC(a, 2) -> 3. Can also use eg BINARY_INC(b, c) as the base case -> 2
+    BINARY_ANY = 10; // returns one of lhs or rhs
+    BINARY_POW = 11; // for strings * int-like, becomes STRING_AGG/string join on the string n times.
+    BINARY_ROOT = 12; // for strings * int-like, becomes an inverse of string join across n ~equally sized partitions (so that if the string already contained , delimited sections before EXP, those would be preserved)
+    BINARY_LOG = 13; // for strings * int-like, becomes BINARY_ROOT. for strings * strings, becomes LEN(SPLIT)
+    BINARY_MODULUS = 14; // for strings * int-like, becomes SPLIT[-LEN(SPLIT)%n].JOIN (eg if split returns 17 results and n=5, discard the first 15 and re-join the last two). for strings * strings becomes REPLACE(orig, substr, "") with TRIM around the substr, (eg foo,bar,foo,bar,baz % bar = foo,foo,baz)
+    BINARY_GT = 15; // for strings * int-like, convert int-like to string; for strings * strings, return true if rhs is a substring of lhs
+    BINARY_EQ = 16; // for strings * int-like, convert int-like to string; for strings * strings, return true if lhs = rhs
+    BINARY_LT = 17; // for strings * int-like, convert int-like to string; for strings * strings, return true if lhs is a substring of rhs
+    BINARY_UDF = 18; // lhs gets evaluated as a url for a methoddescriptorproto operating on rhs. If lhs is not string-like, error or just return lhs/rhs (not sure yet)
+}
+
+message UnaryExpression {
+  UnaryOperation op = 1;
+  FieldExpression arg = 2;
+}
+
+message AggregateExpression {
+  BinaryOperation op = 1;
+  repeated FieldExpression args = 2;
+}
+
+message FieldExpression {
+  oneof Expression {
+    string source = 1;
+    UnaryExpression unary_exp = 2;
+    AggregateExpression aggregate_exp = 3;
+  }
+}
+// eg "foo.bar AS foobar"
+// eg "bar.baz" (implicitly becomes "bar.baz AS bar_baz)"
+// eg "ADD(foo.bar, bar.baz) AS foosum"
+message FieldProjection {
+  FieldExpression source = 1;
+  string target = 2;
+}
+
+message Projection {
+  string name = 1;
+  repeated FieldProjection field_projections = 2;
+}
+
+/* Not sure that we actually need these
+message UnaryExpressionDescriptorProto {
+  UnaryOperation op = 1;
+  FieldExpressionDescriptorProto arg = 2;
+}
+
+message AggregateExpressionDescriptorProto {
+  BinaryOperation op = 1;
+  repeated FieldExpressionDescriptorProto args = 2;
+}
+
+message FieldExpressionDescriptorProto {
+  oneof Expression {
+    FieldDescriptorProto source = 1;
+    UnaryExpressionDescriptorProto unary_exp = 2;
+    AggregateExpressionDescriptorProto aggregate_exp = 3;
+  }
+}
+
+message FieldProjectionDescriptorProto {
+  FieldExpressionDescriptorProto source = 1;
+  FieldDescriptorProto target = 2;
+}
+
+message ProjectionDescriptorProto {
+  string name = 1;
+  repeated FieldProjectionDescriptorProto field_projections = 2;
+}
+*/
+
+message MessageProjection {
+  google.protobuf.Any source = 1;
+  Projection projection = 2;
+}
+
+message TypeProjection {
+  // TODO replace with common resolvable TypeRef
+  repeated FileDescriptorProto deps = 1;
+  FileDescriptorProto defs = 2;
+  string type_name = 3; // should resolve to a DescriptorProto
+  Projection projection = 4;
+}
+  
+
+service Projector {
+  rpc Parse(StringValue) returns(Projection);
+  rpc Project(MessageProjection) returns(google.protobuf.Any);
+  rpc Derive(TypeProjection) returns(DescriptorProto);
+}
