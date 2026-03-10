@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package proto_type;
+
+option go_package = "github.com/accretional/proto-type";
+
+// The messages and services in this file are meant to serve as a bridge from repeated fields and streams into properly-typed protobuf messages
+
+// Our version of google.protobuf.Empty
+// In this context "Nothing" is basically the same thing as an Acknowledgement, but also signifies to consumers of the service that a response/message is not merely "empty" but "meaningless in itself"
+// IE its semantics are fully contingent. It means Nothing on its own, but its presence is meaningful in some other context. That's why the Contact Service treats it like an Event:
+// an Empty response is an acknowledgment to the client from the service that it has *accepted* the request (possibly with some kind of validation or processing), not merely that it has *received* it.
+message Nothing {}
+
+// Untyped google.protobuf.Any, equivalent to BytesValue
+// Important because streams of mixed-type data are not possible to properly represent in protobuf in a way that structurally guarantees parseability of the input data/efficiently encodes types
+// This is a big problem for messages above the grpc max streaming request size limit, which need to be chunked or decomposed.
+// google's Any still doesn't really work properly because stream Any sends type url info in each stream message, which in many cases is unnecessary because every message (or a sequence) will all have the same type
+// You can implement something like message TypedStream{one of type_or_data { string type_url=1; bytes data = 2;}} but then if you stream that, you still don't have clear semantics on how exactly the typed stream is meant to be interpreted
+// The real solution is better primitives: a base representation for untyped, chunked streams that we'll (in other files) combine with types/information about internal structure, and even lexers, grammers, and parsers.
+// What we really want to do is purge out repeated/stream from our type system entirely.
+// "Anything" denotes that this message not just a wrapper for bytes, but that the bytes could *represent* anything (it could potentially even contain a Nothing message! Which still might mean something to someone somewhere else, which is why it's encodeable and there's not some null or "void" bool/oneof in here).
+message Anything {
+  bytes thing = 1;
+}
+
+// Wrapper for repeated data, and destination for streamed Messages. Gives repeated/stream fields a way back into the actual type system,
+// And provides the proper structure for lexing/parsing/dynamic casting of data that may have a more complex type resolution mechanism than just a type url.
+// Basically, this can be paired with type information, lexers/parsers/runtime info/remote state to implement a truly dynamic and flexible type system/serialization protocol.
+// But we want this primitive to not know about all that type complexity because it's the bridge back into protobuf, and also useful for general transport/stream/connection uses.
+message Stuff {
+ repeated Anything things = 1;
+}
+
+// These are essentially events/synchronization primitives. Maybe the names need to change or this just isn't even necessary.
+// But I think we do want these as a way to control complex streaming jobs where output is eg getting intercepted and redirected to remote nodes.
+service Contact {
+  rpc Touch(Nothing) returns (Nothing);
+  rpc Pulse(stream Nothing) returns (Nothing);
+  rpc Watch(Nothing) returns (stream Nothing);
+  rpc Sync(stream Nothing) returns (stream Nothing);
+}
+
+service Buffer {
+  rpc Send(Anything) returns (Nothing);
+  rpc Receive(Nothing) returns(Anything);
+
+  rpc Wait(Anything) returns (stream Nothing);
+  rpc Poll(stream Nothing) returns (Anything)
+
+  rpc Push(stream Anything) returns(Nothing);
+  rpc Pull(Nothing) returns (stream Anything);
+}
+
+service Stuffer {
+  rpc Wrap(Anything) returns(Stuff);
+  rpc Unwrap(Stuff) returns(Anything); // serializes Stuff to Anything, does not unpack the contents of Stuff's things into a single bytes
+  rpc Pack(stream Anything) returns(Stuff);
+  rpc Unpack(Stuff) returns(stream Anything);
+
+  rpc Combine(stream Stuff) returns (Stuff);
+  rpc Separate(Stuff) returns (stream Stuff);
+
+  // A "split" implementation doesn't belong here because it requires some internal structure of Anything, otherwise is just the same as Wrap
+  // I'm skeptical this belongs here either, maybe in something more List-y, but leaving it here for now.
+  rpc Concat(Stuff) returns (Anything);
+
+  // I'm not sure we really want this kind of structure. The purpose of Stuffer is to aggregate discrete chunks of data from streams into a proper type
+  // repeated and stream qualifiers are not "proper" serializable types, so Stuff is the container type that allow for bijective mappings from repeated Thing <-> stream Thing <-> List<Thing>
+  // The difference between Stuff and Collection is that Stuff is not typed, its individual things are not necessarily individually parseable as protobuf types, and in fact the entire Stuff contents may not necessarily be parseable on their own either. Handling parsing of Stuff is left to other services that also encode type information.
+  // rpc DoNotImplement(stream Stuff) returns (stream Stuff);
+}
