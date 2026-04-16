@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package proto_type;
+
+option go_package = "github.com/accretional/proto-type";
+
+service Typer {
+  rpc Resolve(Type) returns(DescriptorProto);
+}
