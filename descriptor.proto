@@ -4,6 +4,8 @@ package proto_type;
 
 option go_package = "github.com/accretional/proto-type";
 
+import "google/protobuf/descriptor.proto";
+
 message Descriptor {
   oneof kind {
     google.protobuf.DescriptorProto message = 1;
@@ -12,4 +14,5 @@ message Descriptor {
     google.protobuf.FileDescriptorProto file = 4;
     google.protobuf.FieldDescriptorProto field = 5;
     google.protobuf.EnumDescriptorProto enum = 6;
+  }
 }

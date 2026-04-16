@@ -4,6 +4,12 @@ package proto_type;
 
 option go_package = "github.com/accretional/proto-type";
 
+import "descriptor.proto";
+import "type.proto";
+
+// Typer resolves named type references to their Descriptor schemas.
+// The name in Type must be fully-qualified (e.g. "google.protobuf.Timestamp",
+// "sqlite.SelectStmt"). Unknown names return NOT_FOUND.
 service Typer {
-  rpc Resolve(Type) returns(DescriptorProto);
+  rpc Resolve(Type) returns (Descriptor);
 }
